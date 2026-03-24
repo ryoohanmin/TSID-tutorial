@@ -69,12 +69,13 @@ tsidtutorial() {
   export PYTHONPATH=~/tsid_ws:/opt/openrobots/lib/python3.8/site-packages:$PYTHONPATH
   cd ~/tsid_ws
 }
-```
+
 tsidhome() {
   tsidtutorial
   cd ~/tsid_ws/tsid/exercizes
   python3 show_ur5_home.py "$@"
 }
+```
 등록 후 새 터미널을 열거나 아래 명령으로 반영합니다.
 
 ```bash
