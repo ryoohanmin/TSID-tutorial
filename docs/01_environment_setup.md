@@ -99,6 +99,8 @@ python3 ex_0_ur5_joint_space_control.py
 ```bash
 gepetto-gui
 ```
+<img width="765" height="772" alt="Screenshot from 2026-03-24 12-28-05" src="https://github.com/user-attachments/assets/a077fdec-2cd3-4035-b67b-8517c4a04c20" />
+
 `tsidtutorial`이 설정하는 값:
 
 - `PATH=/opt/openrobots/bin:$PATH`
