@@ -55,6 +55,13 @@ python3 ex_0_ur5_joint_space_control.py
   - 각 관절의 시작 위상
   - 관절 시작 타이밍이 달라집니다.
 
+
+https://github.com/user-attachments/assets/b63028c5-34fb-4aee-894f-de21062bf76a
+<img width="1056" height="940" alt="Screenshot from 2026-03-24 12-31-59" src="https://github.com/user-attachments/assets/4575163b-0081-4da6-bfcc-811474e60209" />
+<img width="1050" height="942" alt="Screenshot from 2026-03-24 12-31-49" src="https://github.com/user-attachments/assets/f6343a8b-355f-465f-a469-014094a85d11" />
+<img width="1049" height="941" alt="Screenshot from 2026-03-24 12-31-42" src="https://github.com/user-attachments/assets/2d8e9686-ba6e-4a44-87e5-4dc3b55f9326" />
+
+
 ## 결과 변화
 
 - `amp` 증가: 더 큰 관절 움직임, 추종 오차도 커질 수 있음
