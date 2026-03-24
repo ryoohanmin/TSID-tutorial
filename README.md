@@ -8,9 +8,8 @@
 [![OpenRobots](https://img.shields.io/badge/openrobots-%2Fopt%2Fopenrobots-6b7280)](docs/01_environment_setup.md)
 
 `TSID`를 설치하고, 예제를 실행하고, 그래프를 읽고, 파라미터를 바꿔보면서 `whole-body control`까지 이해하는 한국어 튜토리얼입니다.  
-upstream [`stack-of-tasks/tsid`](https://github.com/stack-of-tasks/tsid) 예제를 따라가며 배우는 companion 노트로, 실행 순서와 관찰 포인트를 notebook처럼 짧게 읽고 바로 따라 할 수 있게 정리했습니다.
+upstream [`stack-of-tasks/tsid`](https://github.com/stack-of-tasks/tsid) 예제를 따라가며 실행 순서와 관찰 포인트를 정리했습니다.
 
-실제 실행 코드는 upstream 워크스페이스에서 돌리고, 이 저장소에는 실행 순서, 관찰 포인트, 환경 메모를 notebook 흐름처럼 정리합니다.
 
 ![TSID learning flow](assets/diagrams/tsid_learning_flow.svg)
 
