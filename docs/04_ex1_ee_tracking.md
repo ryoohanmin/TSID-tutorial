@@ -1,8 +1,11 @@
 # ex_1 End-Effector Tracking
 
-이 장에서 하는 일은 `ex_0`에서 본 TSID 루프를 손끝(end-effector) 목표로 확장해 보는 것입니다. 같은 제어 구조가 관절이 아니라 손끝을 직접 따라가도록 바뀌는 점이 핵심입니다.
+## 파일과 목적
 
-## 실행
+- 파일: `ex_1_ur5.py`
+- 목적: 관절 추종에서 손끝(end-effector) 추종으로 제어 대상을 바꾸기
+
+## 실행 명령
 
 ```bash
 tsidtutorial
@@ -10,67 +13,67 @@ cd ~/tsid_ws/tsid/exercizes
 python3 ex_1_ur5.py
 ```
 
-## 왜 ex_0 다음인가
+## 코드에서 만드는 것
 
-`ex_0`는 관절 자체를 맞추는 예제였습니다.
-`ex_1_ur5`는 그 위에 한 겹 더 올라가서 "손끝을 어디로 보낼지"를 직접 다룹니다.
+- `TsidManipulator`
+- `TaskSE3Equality`
+- `TaskJointPosture`
+- 손끝 reference `ee_ref`
 
-즉, 이 예제는 TSID를 `joint-space`에서 `task-space`로 넘어가게 하는 다리 역할입니다.
+손끝 reference는 현재 손끝 위치에 `offset`, `amp`, `phi`, `two_pi_f`를 적용해 만듭니다.
 
-## 무엇을 하는가
+- `offset`: 목표 중심점
+- `amp`: 중심점 주변 진폭
+- `phi`: 위상
+- `two_pi_f`: 움직임 속도
 
-`TsidManipulator`가 로봇 모델과 task를 준비합니다.
-그 안에서 `TaskSE3Equality`가 손끝 자세를 따라가게 하고, `TaskJointPosture`는 관절 자세를 안정적으로 잡아줍니다.
+## 터미널 출력
 
-목표 손끝은 현재 손끝 위치에서 시작해서 `offset`, `amp`, `phi`, `two_pi_f`로 만들어집니다.
+- `tracking err task-ee`
+  실제 손끝과 목표 손끝의 거리입니다.
+- 값이 줄어들면 손끝 추종이 잘 되는 것입니다.
 
-- `offset`
-  목표 중심점입니다.
-- `amp`
-  그 중심점 주변으로 흔들리는 크기입니다.
-- `phi`
-  위상입니다.
-- `two_pi_f`
-  손끝이 얼마나 빠르게 움직일지 정합니다.
+## figure와 subplot 의미
 
-현재 기본 설정은 주로 `offset`으로 목표를 옮기는 방식이라, 먼저 한 점으로 보내는 느낌이 강합니다. `amp`를 키우면 경로 추종처럼 보입니다.
-
-## 무엇을 관찰할까
-
-뷰어에서는 두 개의 구를 봅니다.
-
-- `world/ee`
-  실제 손끝 위치
-- `world/ee_ref`
-  목표 손끝 위치
-
-두 구가 겹치면 손끝이 잘 따라가고 있는 것입니다.
-
-터미널의 `tracking err task-ee`도 같이 봅니다.
-이 값이 작아질수록 손끝 목표를 잘 추종하고 있습니다.
-
-## 그래프 의미
-
-현재 설정에서는 위치, 속도, 가속도, 관절속도, 토크 그래프가 모두 켜져 있습니다.
+현재 설정에서는 위치, 속도, 가속도, 관절속도, 토크 figure를 모두 켭니다. 각 figure는 `Axis X`, `Axis Y`, `Axis Z` subplot으로 구성됩니다.
 
 - `End-Effector Position Tracking`
-  실제 손끝 위치와 목표 손끝 위치를 비교합니다.
+  - 파란선: 실제 손끝 위치
+  - 점선: 목표 손끝 위치
 - `End-Effector Velocity Tracking`
-  실제 손끝 속도와 목표 속도를 비교합니다.
+  - 파란선: 실제 손끝 속도
+  - 점선: 목표 속도
 - `End-Effector Acceleration Tracking`
-  실제 가속도, reference 가속도, task가 계산한 desired acceleration을 비교합니다.
+  - 파란선: 실제 가속도
+  - 점선: reference 가속도
+  - 초록 점선: desired acceleration
 - `Joint Velocity`
-  손끝 추종을 위해 각 관절이 얼마나 빠르게 움직였는지 보여줍니다.
+  - 각 관절이 손끝 추종을 위해 얼마나 빨리 움직였는지
 - `Joint Torque`
-  손끝 추종을 위해 각 관절에 얼마나 토크가 필요한지 보여줍니다.
+  - 각 관절에 얼마나 토크가 필요한지
 
-각 figure 안에는 `Axis X`, `Axis Y`, `Axis Z` 제목이 붙은 subplot이 있어, 어떤 축의 움직임인지 바로 읽을 수 있습니다.
+## 바꿔볼 파라미터
 
-## 왜 중요한가
+- `offset`
+  - 목표를 한쪽으로 이동
+  - 키우면 손끝이 멀리 이동합니다.
+- `amp`
+  - 경로 진폭
+  - 0이면 점 이동, 0이 아니면 왕복 경로가 보입니다.
+- `two_pi_f`
+  - 움직임 속도
+  - 키우면 더 빠른 경로 추종이 됩니다.
+- `phi`
+  - 축별 시작 위상
+  - 축 간 위상차를 주면 원형/타원형 경로가 나옵니다.
 
-`ex_1_ur5`를 보고 나면 TSID가 단순히 관절만 맞추는 게 아니라, task를 바꾸면 손끝도 직접 제어할 수 있다는 점이 보입니다.
-그 다음 단계인 `ex_2`에서는 이 개념이 로봇 전체 균형, 즉 `CoM`과 contact로 확장됩니다.
+## 결과 변화
+
+- `offset` 증가: 손끝 목표 위치가 더 멀어짐
+- `amp` 증가: 그래프가 더 넓게 흔들림
+- `two_pi_f` 증가: 손끝 움직임이 더 빠름
+- `phi` 조정: x/y/z 축 파형 시작점이 달라짐
 
 ## 다음 단계
 
-다음 장인 [ex_2 CoM Tracking](05_ex2_com_tracking.md) 에서는 손끝 대신 로봇 무게중심을 직접 따라가게 하면서, floating-base와 contact의 의미를 연결합니다.
+다음 장인 [ex_2 CoM Tracking](05_ex2_com_tracking.md) 에서는 손끝 대신 무게중심(CoM)을 목표로 두고 floating-base와 contact를 같이 봅니다.

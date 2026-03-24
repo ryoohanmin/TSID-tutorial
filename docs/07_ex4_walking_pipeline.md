@@ -1,8 +1,10 @@
 # ex_4 Walking Pipeline
 
-이 장에서 하는 일은 `plan -> interpolate -> whole-body control`이 어떻게 이어지는지 보는 것입니다. 앞의 `ex_0`, `ex_1`, `ex_2`, `ex_3`가 task와 contact의 기본 감각을 익히는 단계라면, `ex_4`는 그 감각을 실제 보행 파이프라인으로 묶는 단계입니다.
+`ex_4`는 TSID tutorial의 최종 보행 예제다. 이 장은 `plan -> interpolate -> whole-body control`의 3단계를 순서대로 실행하면서, planner가 만든 발자국과 CoM reference를 TSID가 실제 walking으로 바꾸는 과정을 보여준다.
 
-## 실행
+## 실행 순서
+
+아래 3개를 반드시 순서대로 실행한다.
 
 ```bash
 tsidtutorial
@@ -12,157 +14,310 @@ python3 ex_4_LIPM_to_TSID.py
 python3 ex_4_walking.py
 ```
 
-## ex_4가 의미하는 것
+## 전체 흐름
 
-`ex_4`는 로봇이 그냥 걷는 모습을 보여주는 예제가 아니라, 걷기 위해 필요한 계획과 제어를 분리해서 이해하게 해주는 예제입니다.
+`ex_4`는 하나의 스크립트가 아니라 3개의 단계로 나뉜 파이프라인이다.
 
-- `ex_4_plan_LIPM_romeo.py`
-  - 발자국과 CoP, CoM을 계획합니다.
-  - `LIPM`이라는 단순화된 보행 모델을 사용합니다.
-- `ex_4_LIPM_to_TSID.py`
-  - planner 결과를 TSID가 쓸 시간 간격으로 바꿉니다.
-  - 발 궤적과 CoM/CoP reference를 만듭니다.
-- `ex_4_walking.py`
-  - TSID whole-body controller가 실제 보행을 수행합니다.
-  - contact phase를 바꾸면서 로봇을 실제로 움직입니다.
-
-즉 `ex_4`는 `어디에 발을 디딜지`를 먼저 정하고, 그 결과를 `제어기가 따라갈 수 있는 형식`으로 바꾼 다음, 마지막에 `전신 역동역학`으로 걷게 만드는 구조입니다.
+1. `ex_4_plan_LIPM_romeo.py`
+   - LIPM 기반 보행 계획을 만든다.
+   - 발자국, CoP, CoM reference를 계산한다.
+   - 중간 결과를 `.npz`로 저장한다.
+2. `ex_4_LIPM_to_TSID.py`
+   - planner 결과를 TSID controller 주기에 맞게 보간한다.
+   - swing foot trajectory를 만든다.
+   - TSID용 `.npz`를 저장한다.
+3. `ex_4_walking.py`
+   - TSID whole-body controller로 실제 보행을 실행한다.
+   - contact phase를 바꾸며 CoM과 발 reference를 추종한다.
 
 ## 1. `ex_4_plan_LIPM_romeo.py`
 
-이 스크립트는 보행의 큰 그림을 만듭니다.
+이 스크립트는 보행의 큰 그림을 만든다.
 
-### 읽고 쓰는 것
+### 읽는 파일 / 모듈
 
-- 읽는 것
-  - [ex_4_conf.py](/home/ryoo/tsid_ws/tsid/exercizes/ex_4_conf.py)
-  - `LMPC_walking`의 `second_order` 모듈
-- 쓰는 것
-  - [romeo_walking_traj_lipm.npz](/home/ryoo/tsid_ws/tsid/exercizes/romeo_walking_traj_lipm.npz)
+- `ex_4_conf.py`
+  - 보행 파라미터, 발 크기, step 길이, step 높이, 시간 간격을 읽는다.
+- `LMPC_walking.second_order.*`
+  - `constraints`
+  - `cost_function`
+  - `motion_model`
+  - `reference_trajectories`
+  - `plot_utils`
+- `quadprog`
+  - QP를 푼다.
 
-### 이 단계에서 계산하는 값
+### 쓰는 파일
+
+- `romeo_walking_traj_lipm.npz`
+  - `com_state_x`
+  - `com_state_y`
+  - `cop_ref`
+  - `cop_x`
+  - `cop_y`
+  - `foot_steps`
+
+### 핵심 계산
 
 - `foot_steps`
-  - 어느 발을 어느 순서로 디딜지 정합니다.
+  - 어느 발을 어느 순서로 디딜지 정한다.
 - `cop_ref`
-  - 지지영역 안에서 CoP가 어떻게 움직여야 하는지 정합니다.
-- `com_state_x`, `com_state_y`
-  - x/y 방향 CoM 상태를 계산합니다.
+  - 지지영역 안에서 CoP가 따라야 할 reference를 만든다.
+- `P_ps`, `P_vs`, `P_pu`, `P_vu`
+  - LIPM preview 모델의 recursive matrix를 만든다.
+- `Q`, `p_k`
+  - QP cost를 만든다.
+- `A_zmp`, `b_zmp`
+  - CoP가 발바닥 안에 머무르도록 제약을 만든다.
+- `U`
+  - `solve_qp()`가 낸 최적 해다.
 - `cop_x`, `cop_y`
-  - QP solver가 만든 실제 CoP 궤적입니다.
+  - 계산된 CoP 궤적이다.
+- `com_state_x`, `com_state_y`
+  - CoM 상태 궤적이다.
+
+### 터미널 메시지
+
+이 스크립트는 보통 긴 로그를 출력하지 않는다. 실행이 끝나고 `.npz`와 figure가 생기면 계획 단계가 성공한 것이다.
 
 ### 그래프 의미
 
 - `CoP and CoM Along X`
-  - 실제 CoP, reference CoP, CoM, 허용 CoP 범위를 x축에서 비교합니다.
+  - x축에서 `Computed CoP`, `CoP Ref`, `CoM`, `Min/Max CoP`를 비교한다.
 - `CoP and CoM Along Y`
-  - y축 버전입니다.
+  - y축에서 같은 비교를 한다.
 - `CoP and CoM in the Horizontal Plane`
-  - XY 평면에서 CoP와 CoM, 발 지지 사각형을 함께 봅니다.
+  - XY 평면에서 발 지지영역, CoP, CoM 경로를 함께 본다.
 
-### 무엇을 관찰할까
+### 확인할 점
 
-- `Computed CoP`가 `Min/Max CoP` 안에 있는지 봅니다.
-- `CoM`이 지지영역과 보행 방향을 자연스럽게 따라가는지 봅니다.
-- XY 평면에서 발 디딤 위치가 걷기 리듬을 만드는지 봅니다.
+- `Computed CoP`가 허용 범위 안에 머무는지 본다.
+- CoM이 발자국 리듬에 맞게 앞으로 진행하는지 본다.
+- XY 평면에서 CoP가 발 지지 사각형을 벗어나지 않는지 본다.
 
 ## 2. `ex_4_LIPM_to_TSID.py`
 
-이 스크립트는 planner 결과를 TSID용 참조 궤적으로 바꿉니다.
+이 스크립트는 planner 결과를 TSID controller가 바로 쓸 수 있는 reference로 바꾼다.
 
-### 읽고 쓰는 것
+### 읽는 파일 / 모듈
 
-- 읽는 것
-  - [romeo_walking_traj_lipm.npz](/home/ryoo/tsid_ws/tsid/exercizes/romeo_walking_traj_lipm.npz)
-  - [ex_4_conf.py](/home/ryoo/tsid_ws/tsid/exercizes/ex_4_conf.py)
-- 쓰는 것
-  - [romeo_walking_traj_tsid.npz](/home/ryoo/tsid_ws/tsid/exercizes/romeo_walking_traj_tsid.npz)
+- `ex_4_conf.py`
+  - controller 주기, step 높이, data file 이름을 읽는다.
+- `romeo_walking_traj_lipm.npz`
+  - planner가 만든 LIPM 결과를 읽는다.
+- `LMPC_walking.second_order.LIPM_to_whole_body`
+  - `interpolate_lipm_traj`
+  - `compute_foot_traj`
 
-### 이 단계에서 하는 일
+### 쓰는 파일
+
+- `romeo_walking_traj_tsid.npz`
+  - `com`
+  - `dcom`
+  - `ddcom`
+  - `x_RF`, `dx_RF`, `ddx_RF`
+  - `x_LF`, `dx_LF`, `ddx_LF`
+  - `contact_phase`
+  - `cop`
+
+### 핵심 계산
 
 - `interpolate_lipm_traj(...)`
-  - LIPM planner의 시간 간격을 TSID controller 시간 간격으로 바꿉니다.
+  - LIPM planner 주기 `dt_mpc`를 TSID controller 주기 `dt`로 맞춘다.
 - `compute_foot_traj(...)`
-  - 오른발과 왼발의 swing/stance 궤적을 만듭니다.
+  - 오른발과 왼발의 swing/stance trajectory를 만든다.
+- `contact_phase`
+  - 어느 발이 지지발인지, 어느 발이 스윙발인지 기록한다.
+
+### 터미널 메시지
+
+이 스크립트도 보통 에러가 없으면 조용하게 끝난다. 성공하면 `romeo_walking_traj_tsid.npz`가 생긴다.
 
 ### 그래프 의미
 
 - `Interpolated Foot Position References`
-  - 오른발과 왼발의 위치 reference를 비교합니다.
-  - Z축이 올라가면 발을 들어올리는 swing phase입니다.
+  - `Axis X Foot Position`
+  - `Axis Y Foot Position`
+  - `Axis Z Foot Position`
+  - 오른발과 왼발 reference를 비교한다.
+  - Z축 상승은 발을 드는 swing phase다.
 - `Interpolated CoM and CoP References`
-  - interpolated CoP와 CoM을 봅니다.
-  - planner 결과와 controller용 reference가 잘 맞는지 읽습니다.
+  - `Axis X Horizontal Motion`
+  - `Axis Y Horizontal Motion`
+  - interpolated CoP, interpolated CoM, LIPM CoM sample을 비교한다.
 - `Interpolated Walking Plan in XY`
-  - XY 평면에서 CoP, CoM, 발자국 위치를 함께 봅니다.
+  - XY 평면에서 CoP, CoM, foot step을 함께 본다.
 
-### 무엇을 관찰할까
+### 확인할 점
 
-- 발 위치의 Z축이 swing phase에서 올라갔다 내려오는지 봅니다.
-- CoM과 CoP가 controller 주기에서도 끊기지 않고 이어지는지 봅니다.
-- planner 단계에서 만든 결과가 TSID가 바로 따라갈 수 있는 형태인지 확인합니다.
+- swing foot의 Z축이 자연스럽게 올라갔다 내려오는지 본다.
+- CoM과 CoP가 controller 주기에서도 끊기지 않고 이어지는지 본다.
+- planner 결과가 TSID reference로 바뀌어도 보행 리듬이 유지되는지 본다.
 
 ## 3. `ex_4_walking.py`
 
-이 스크립트는 TSID whole-body control을 실제로 돌리는 단계입니다.
+이 스크립트는 실제 TSID whole-body walking을 실행한다.
 
-### 읽고 쓰는 것
+### 읽는 파일 / 모듈
 
-- 읽는 것
-  - [romeo_walking_traj_tsid.npz](/home/ryoo/tsid_ws/tsid/exercizes/romeo_walking_traj_tsid.npz)
-  - [ex_4_conf.py](/home/ryoo/tsid_ws/tsid/exercizes/ex_4_conf.py)
-  - [tsid_biped.py](/home/ryoo/tsid_ws/tsid/exercizes/tsid_biped.py)
-- 쓰는 것
-  - 화면에 보이는 로봇 상태
-  - 내부 로그 배열 `com_pos`, `com_vel`, `com_acc`, `f_RF`, `f_LF`, `tau`, `q_log`, `v_log`
+- `ex_4_conf.py`
+  - controller 설정, pre/post time, plot flag를 읽는다.
+- `romeo_walking_traj_tsid.npz`
+  - TSID용 reference를 읽는다.
+- `tsid_biped.py`
+  - CoM, foot, contact, solver, integration을 담당한다.
 
-### 메인 루프가 하는 일
+### 쓰는 파일
 
-- 시작 전 reference를 읽어옵니다.
-- `Press enter to start`에서 대기합니다.
-- 매 시점마다 CoM과 양발 reference를 넣습니다.
-- contact phase가 바뀌면 contact를 바꿉니다.
-- QP를 풀어서 가속도와 토크를 구합니다.
-- 적분해서 다음 자세로 넘어갑니다.
-- viewer와 그래프에 결과를 보여줍니다.
+- 별도의 `.npz`는 만들지 않는다.
+- 내부 로그 배열을 메모리에 쌓는다.
+  - `com_pos`
+  - `com_vel`
+  - `com_acc`
+  - `x_LF`, `dx_LF`, `ddx_LF`
+  - `x_RF`, `dx_RF`, `ddx_RF`
+  - `f_LF`, `f_RF`
+  - `tau`
+  - `q_log`, `v_log`
 
-### 터미널 메시지 의미
+### 핵심 계산
 
+- `TsidBiped(conf, conf.viewer)`
+  - 로봇 모델, contact, tasks, solver를 초기화한다.
+- `tsid_biped.solver.solve(HQPData)`
+  - 각 시점의 QP를 푼다.
+- `integrate_dv(q, v, dv, conf.dt)`
+  - 해를 적분해서 다음 상태를 계산한다.
+- `contact_phase`
+  - 왼발/오른발 contact를 언제 바꿀지 결정한다.
+- `set_com_ref`, `set_LF_3d_ref`, `set_RF_3d_ref`
+  - planner가 만든 reference를 TSID task에 넣는다.
+
+### 실행 중 순서
+
+1. `Press enter to start`에서 대기한다.
+2. 시작 시 왼발 contact를 끊고 walking을 시작한다.
+3. `contact_phase`가 바뀌면 contact를 교체한다.
+4. 매 시점 CoM과 발 reference를 갱신한다.
+5. QP를 풀고 적분해서 다음 상태로 넘어간다.
+6. viewer와 그래프를 갱신한다.
+7. 마지막에 `Play video again?`으로 replay 여부를 묻는다.
+
+### 터미널 메시지
+
+- `Using eiquadprog`
+  - 현재 선택된 QP solver가 `eiquadprog`라는 뜻이다.
 - `Press enter to start`
-  - 보행을 실제로 시작하기 전 정지 상태입니다.
+  - 보행 시작 전 대기 상태다.
 - `Starting to walk (remove contact left foot)`
-  - 첫 보행 전환이 시작됐습니다.
-- `Changing contact phase from right to left`
-  - 다음 스텝에서 지지 발이 바뀝니다.
-- `normal force ...`
-  - 해당 발이 바닥을 얼마나 누르고 있는지 보여줍니다.
+  - 첫 보행 전환이 시작됐다.
+- `Time ... Changing contact phase from right to left`
+  - 현재 step에서 지지발이 바뀌었다.
+- `normal force contact_rf / contact_lf`
+  - 각 발이 바닥을 얼마나 누르는지 보여준다.
 - `tracking err task-com ...`
-  - CoM task가 reference를 얼마나 잘 따라가는지 보여줍니다.
-- `||v||` / `||dv||`
-  - 속도와 가속도 크기입니다.
+  - CoM task 추종 오차다.
+- `||v||`, `||dv||`
+  - 전신 속도와 가속도 크기다.
+- `Play video again? [Y]/n:`
+  - 저장된 q log를 다시 재생할지 묻는다.
 
 ### 그래프 의미
 
-- `Center of Mass Position Tracking`
-  - 실제 CoM과 reference CoM을 비교합니다.
-- `Center of Mass Velocity Tracking`
-  - 실제 속도와 reference 속도를 비교합니다.
-- `Center of Mass Acceleration Tracking`
-  - 실제 가속도, reference 가속도, task가 요구한 가속도를 비교합니다.
-- `Center of Pressure Evolution`
-  - left/right foot CoP와 limit를 함께 봅니다.
-- `Foot Position Tracking`
-  - `PLOT_FOOT_TRAJ = 1`일 때 foot reference를 확인합니다.
-- `Normalized Joint Torque Usage`
-  - 각 관절 토크가 limit 대비 어느 정도인지 봅니다.
-- `Normalized Joint Velocity Usage`
-  - 각 관절 속도가 limit 대비 어느 정도인지 봅니다.
+#### Center of Mass Position Tracking
 
-## 왜 중요한가
+3개의 subplot이다.
 
-`ex_4`는 TSID가 `task를 푸는 도구`를 넘어서, `walking reference를 whole-body dynamics로 실행하는 controller`라는 점을 가장 잘 보여줍니다.
-이 단계까지 오면 `task`, `contact`, `CoM`, `footstep`, `solver`가 서로 어떻게 연결되는지 한 덩어리로 이해할 수 있습니다.
+- `Axis X CoM Position`
+- `Axis Y CoM Position`
+- `Axis Z CoM Position`
 
-## 다음 단계
+실제 CoM과 reference CoM을 비교한다.
 
-다음은 이 문서의 마지막 보조 장인 [자주 만나는 오류](08_common_errors.md) 와 [파라미터 튜닝](09_parameter_tuning.md) 입니다. 보행이 어떻게 생겼는지 이해한 뒤, 이제는 실행이 막힐 때와 값을 바꿨을 때의 변화를 바로 읽으면 됩니다.
+#### Center of Mass Velocity Tracking
+
+3개의 subplot이다.
+
+- `Axis X CoM Velocity`
+- `Axis Y CoM Velocity`
+- `Axis Z CoM Velocity`
+
+실제 속도와 reference 속도를 비교한다.
+
+#### Center of Mass Acceleration Tracking
+
+3개의 subplot이다.
+
+- `Axis X CoM Acceleration`
+- `Axis Y CoM Acceleration`
+- `Axis Z CoM Acceleration`
+
+세 곡선을 함께 읽는다.
+
+- 파란 실선: 실제 CoM acceleration
+- 빨간 점선: reference acceleration
+- 초록 점선: task가 원하는 acceleration
+
+#### Center of Pressure Evolution
+
+2개의 subplot이다.
+
+- `Axis X Center of Pressure`
+- `Axis Y Center of Pressure`
+
+왼발/오른발 CoP가 발바닥 limit 안에 머무는지 본다.
+
+#### Foot Position Tracking
+
+`PLOT_FOOT_TRAJ = 1`일 때 뜬다.
+
+- `Axis X Foot Position`
+- `Axis Y Foot Position`
+- `Axis Z Foot Position`
+
+오른발/왼발 reference와 실제 발 위치를 비교한다.
+
+#### Normalized Joint Torque Usage
+
+`PLOT_TORQUES = 1`일 때 뜬다.
+
+- 각 관절 torque가 limit 대비 얼마나 쓰였는지 본다.
+- 1과 -1 근처에 가까울수록 limit 사용량이 높다.
+
+#### Normalized Joint Velocity Usage
+
+`PLOT_JOINT_VEL = 1`일 때 뜬다.
+
+- 각 관절 속도가 limit 대비 얼마나 쓰였는지 본다.
+
+### 조정 가능한 파라미터
+
+- `step_length`
+  - 한 걸음 길이
+- `step_height`
+  - 발 들림 높이
+- `nb_steps`
+  - 걸음 수
+- `T_step`
+  - 한 스텝 시간
+- `T_pre`, `T_post`
+  - 걷기 전후 대기 시간
+- `PLOT_COM`, `PLOT_COP`, `PLOT_FOOT_TRAJ`, `PLOT_TORQUES`, `PLOT_JOINT_VEL`
+  - 어떤 그래프를 띄울지 정한다.
+- `USE_EIQUADPROG`, `USE_PROXQP`, `USE_OSQP`
+  - 어떤 QP solver를 쓸지 정한다.
+
+## npz 파일 의미
+
+`ex_4`는 중간 결과를 두 개의 `.npz`로 나눠 저장한다.
+
+- `romeo_walking_traj_lipm.npz`
+  - planner 단계의 결과다.
+  - CoM과 CoP의 큰 그림이 들어 있다.
+- `romeo_walking_traj_tsid.npz`
+  - TSID controller가 바로 읽는 reference다.
+  - CoM, 발, contact phase가 controller 주기에 맞게 정리돼 있다.
+
+## 요약
+
+`ex_4`는 TSID tutorial에서 `보행을 어떻게 만들어서 실제로 움직이게 하는지`를 가장 분명하게 보여주는 장이다. planner가 발자국과 CoM/CoP를 만들고, interpolation이 controller 주기에 맞추고, whole-body TSID가 contact switching과 함께 실제 walking을 수행한다.

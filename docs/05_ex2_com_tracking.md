@@ -1,6 +1,6 @@
 # ex_2 CoM Tracking
 
-이 장에서 하는 일은 manipulator 예제에서 biped balance로 넘어가기 전, `무게중심(CoM)`을 처음 다뤄보는 것입니다. 손끝 대신 CoM을 움직이고, 그 상태에서 양발 contact를 유지하는 것이 핵심입니다.
+`ex_2`는 floating-base biped에서 `CoM(center of mass)`를 실제로 추종하는 첫 단계다. 이 장에서는 손끝이 아니라 무게중심을 reference로 두고, 양발 contact를 유지한 상태에서 CoM 위치, 속도, 가속도를 함께 확인한다.
 
 ## 실행
 
@@ -10,43 +10,116 @@ cd ~/tsid_ws/tsid/exercizes
 python3 ex_2.py
 ```
 
-## 무엇을 보는가
+## 입력
 
-이 예제에서는 로봇이 거의 제자리에서 버티는 상태를 유지하면서 CoM만 천천히 흔듭니다.
-보통 `y` 방향 CoM tracking이 가장 눈에 띄고, `x`와 `z`는 상대적으로 작게 유지됩니다.
+- `ex_2.py`
+  - CoM reference를 시간에 따라 생성한다.
+  - 기본적으로 `y`축 방향 사인파 tracking을 만든다.
+  - `amp`, `two_pi_f`, `N_SIMULATION` 값을 사용한다.
+- `romeo_conf.py`
+  - 시뮬레이션 주기 `dt`
+  - 출력 주기 `PRINT_N`
+  - 화면 갱신 주기 `DISPLAY_N`
+  - 로봇 모델과 contact 설정
+- `tsid_biped.py`
+  - CoM task, posture task, 양발 contact를 포함한 TSID 문제를 구성한다.
 
-터미널에서는 다음 두 가지를 먼저 봅니다.
+## 출력
 
-- `normal force`
-  - 각 발이 바닥을 얼마나 누르고 있는지 보여줍니다.
-  - 두 발 모두 양수로 유지되면 contact가 살아 있다는 뜻입니다.
+- 터미널 로그
+  - `normal force ...`
+  - `tracking err task-com ...`
+  - `||v||`, `||dv||`
+- matplotlib figure 3개
+  - `Center of Mass Position Tracking`
+  - `Center of Mass Velocity Tracking`
+  - `Center of Mass Acceleration Tracking`
+- 별도의 `.npz` 파일은 생성하지 않는다.
+
+## 핵심 계산
+
+`ex_2`는 다음 순서로 동작한다.
+
+1. 현재 CoM 위치를 초기 reference 중심으로 잡는다.
+2. `y`축 방향으로만 사인파 reference를 만든다.
+3. `tsid.comTask`와 `tsid.postureTask`에 reference를 넣는다.
+4. `computeProblemData()`로 HQP를 만들고 QP를 푼다.
+5. solver 결과에서 `dv`, `tau`, contact force를 읽는다.
+6. 적분해서 다음 상태로 넘어간다.
+
+이 예제의 핵심은 `CoM reference`와 `실제 CoM`이 얼마나 잘 겹치는지 보는 것이다.
+
+## 터미널 메시지
+
+- `normal force contact_rfoot / contact_lfoot`
+  - 각 발이 바닥을 얼마나 지지하는지 보여준다.
+  - 두 발 모두 양수로 유지되면 contact가 살아 있는 상태다.
 - `tracking err task-com`
-  - 현재 CoM과 목표 CoM의 차이 크기입니다.
-  - 시간이 지나며 작게 유지되거나 줄어들면 CoM 추종이 잘 되고 있다는 뜻입니다.
+  - 현재 CoM과 목표 CoM의 거리 오차다.
+  - 작고 안정적으로 유지되면 추종이 잘 되는 것이다.
+- `||v||`, `||dv||`
+  - 전신 속도와 가속도 크기다.
+  - 너무 커지면 동작이 거칠어질 가능성이 있다.
 
-그래프는 3개를 기본으로 읽으면 됩니다.
+## 그래프 의미
 
-- `Center of Mass Position Tracking`
-  - 실제 CoM 위치와 목표 CoM 위치를 비교합니다.
-  - `x`, `y`, `z` subplot으로 나뉩니다.
-- `Center of Mass Velocity Tracking`
-  - CoM 속도가 목표 속도를 따라가는지 봅니다.
-- `Center of Mass Acceleration Tracking`
-  - 실제 가속도, 기준 가속도, task가 원하는 가속도를 함께 봅니다.
+### Center of Mass Position Tracking
 
-## 해석 포인트
+3개의 subplot으로 구성된다.
 
-- `y` 방향 그래프만 눈에 띄게 흔들리는지 확인합니다.
-- `x`, `z` 방향은 크게 움직이지 않는 것이 자연스럽습니다.
-- `normal force`가 한 발에만 몰리거나 급격히 흔들리면 균형이 불안정해집니다.
-- `tracking err task-com`이 너무 크게 남으면 CoM task가 reference를 잘 못 따라가고 있다는 뜻입니다.
+- `Axis X CoM Position`
+  - 실제 CoM의 x 위치와 reference x 위치를 비교한다.
+- `Axis Y CoM Position`
+  - 실제 CoM의 y 위치와 reference y 위치를 비교한다.
+- `Axis Z CoM Position`
+  - 실제 CoM의 z 위치와 reference z 위치를 비교한다.
 
-## 왜 중요한가
+여기서는 `y`축 subplot이 가장 중요하다. 기본 설정상 y축만 눈에 띄게 흔들리고, x/z는 크게 변하지 않는 것이 자연스럽다.
 
-`ex_0`와 `ex_1_ur5`는 주로 manipulator의 관절과 손끝을 다뤘습니다.
-`ex_2`부터는 floating-base biped의 중심 개념인 `CoM`과 `contact`를 직접 다루기 시작합니다.
-이 예제가 이해되면 다음 `ex_3`에서 GUI로 균형을 직접 만져보는 과정이 훨씬 자연스러워집니다.
+### Center of Mass Velocity Tracking
 
-## 다음 단계
+3개의 subplot으로 구성된다.
 
-다음 장인 [ex_3 Interactive Balance](06_ex3_balance_gui.md) 에서는 CoM과 발 목표를 GUI로 바꾸고, contact를 직접 끊었다 붙이며 균형이 어떻게 깨지고 다시 잡히는지 봅니다.
+- `Axis X CoM Velocity`
+- `Axis Y CoM Velocity`
+- `Axis Z CoM Velocity`
+
+실제 속도와 reference 속도를 비교한다. 위치 그래프의 시간 미분에 가까운 관점으로 읽으면 된다.
+
+### Center of Mass Acceleration Tracking
+
+3개의 subplot으로 구성된다.
+
+- `Axis X CoM Acceleration`
+- `Axis Y CoM Acceleration`
+- `Axis Z CoM Acceleration`
+
+각 subplot에는 3개의 곡선이 나온다.
+
+- 파란 실선: 실제 CoM acceleration
+- 빨간 점선: reference acceleration
+- 초록 점선: task feedback을 포함한 desired acceleration
+
+실제 solver 결과가 desired acceleration에 잘 붙어 있으면 CoM task가 안정적으로 작동하는 것이다.
+
+## 조정 가능한 파라미터
+
+- `amp`
+  - CoM 흔들림 크기
+  - 키우면 y축 tracking 진폭이 커진다.
+- `two_pi_f`
+  - CoM 흔들림 속도
+  - 키우면 더 빠르게 움직인다.
+- `N_SIMULATION`
+  - 전체 실행 길이
+  - 늘리면 더 오래 관찰할 수 있다.
+- `PRINT_N`
+  - 터미널 출력 간격
+  - 줄이면 더 자주 상태를 볼 수 있다.
+- `DISPLAY_N`
+  - viewer 갱신 간격
+  - 줄이면 화면이 더 자주 바뀐다.
+
+## 요약
+
+`ex_2`는 `양발 contact를 유지한 상태에서 CoM을 추종하는지`를 보는 보고서형 기본 예제다. 이 장에서 확인할 핵심은 `normal force`, `tracking err`, 그리고 3개의 CoM 그래프가 서로 일관되게 움직이는지다.

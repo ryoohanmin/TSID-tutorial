@@ -1,6 +1,7 @@
 # 환경 준비와 실행 규칙
 
-이 장에서 하는 일은 `TSID tutorial`을 시작하기 전에, 어떤 워크스페이스에서 무엇을 실행해야 하는지 한 번에 정리하는 것입니다. 실제 예제 코드는 upstream [`stack-of-tasks/tsid`](https://github.com/stack-of-tasks/tsid) 에 있고, 이 저장소는 그 예제를 따라 배우기 위한 companion 문서입니다.
+이 문서는 TSID 예제를 실행할 워크스페이스, 셸 함수, 기본 점검 명령을 정리합니다.  
+실제 예제 코드는 upstream [`stack-of-tasks/tsid`](https://github.com/stack-of-tasks/tsid)에 있고, 이 저장소는 실행 기준과 확인 항목을 보조 문서로 제공합니다.
 
 ## 검증된 환경
 
@@ -10,24 +11,28 @@
 - `robotpkg` / `openrobots`
 - TSID `v1.7.1`
 
-## 실행
+## 저장소와 실행 경로
 
-터미널에서 아래 순서대로 시작합니다.
+- 문서 저장소: `/home/ryoo/TSID-tutorial`
+- upstream 워크스페이스: `~/tsid_ws`
+- TSID 코드: `~/tsid_ws/tsid`
+- 예제 실행 경로: `~/tsid_ws/tsid/exercizes`
+- 셸 함수 스니펫: `/home/ryoo/TSID-tutorial/configs/bashrc_snippets/tsidtutorial.sh`
+- 홈 자세 스니펫: `/home/ryoo/TSID-tutorial/configs/bashrc_snippets/tsidhome.sh`
+
+## 설치와 클론
+
+필수 패키지 설치:
 
 ```bash
-source ~/.bashrc
-tsidtutorial
-tsidhome
+sudo apt update
+sudo apt install \
+  robotpkg-py38-tsid \
+  robotpkg-py38-example-robot-data \
+  robotpkg-py38-qt5-gepetto-viewer-corba
 ```
 
-그다음 첫 예제로 들어갑니다.
-
-```bash
-cd ~/tsid_ws/tsid/exercizes
-python3 ex_0_ur5_joint_space_control.py
-```
-
-upstream 저장소가 아직 없다면 먼저 받습니다.
+upstream TSID 클론:
 
 ```bash
 mkdir -p ~/tsid_ws
@@ -35,43 +40,83 @@ cd ~/tsid_ws
 git clone --recursive https://github.com/stack-of-tasks/tsid.git
 cd tsid
 git checkout v1.7.1
+git submodule update --init --recursive
 ```
 
-## `tsidtutorial`
-
-`tsidtutorial`은 TSID 실습용 환경을 한 번에 맞춰주는 셸 함수입니다.
-
-- `/opt/openrobots/bin`을 `PATH`에 추가합니다.
-- `/opt/openrobots/lib`를 `LD_LIBRARY_PATH`에 추가합니다.
-- `/opt/openrobots/lib/pkgconfig`를 `PKG_CONFIG_PATH`에 추가합니다.
-- `/opt/openrobots`를 `CMAKE_PREFIX_PATH`에 추가합니다.
-- `~/tsid_ws`를 `PYTHONPATH`에 추가합니다.
-- `~/tsid_ws`로 이동합니다.
-
-## `tsidhome`
-
-`tsidhome`은 UR5의 초기 홈 자세를 빠르게 확인하는 보조 명령입니다.
+`ex_4` 추가 의존성:
 
 ```bash
+cd ~/tsid_ws
+git clone https://github.com/machines-in-motion/LMPC_walking.git
+pip3 install --user quadprog
+```
+
+## 셸 함수 등록
+
+`~/.bashrc`에 아래 두 줄을 추가합니다.
+
+```bash
+source /home/ryoo/TSID-tutorial/configs/bashrc_snippets/tsidtutorial.sh
+source /home/ryoo/TSID-tutorial/configs/bashrc_snippets/tsidhome.sh
+```
+
+등록 후 새 터미널을 열거나 아래 명령으로 반영합니다.
+
+```bash
+source ~/.bashrc
+```
+
+## 실행 명령
+
+기본 시작:
+
+```bash
+tsidtutorial
 tsidhome
 ```
 
-이 명령은 upstream 예제 워크스페이스의 `show_ur5_home.py`를 실행해서 초기 자세를 시각화합니다.
+첫 예제 실행:
 
-## 무엇을 확인할까
+```bash
+cd ~/tsid_ws/tsid/exercizes
+python3 ex_0_ur5_joint_space_control.py
+```
 
-환경이 맞는지 가장 빠르게 확인하려면 아래 한 줄이 잘 동작하면 됩니다.
+`tsidtutorial`이 설정하는 값:
+
+- `PATH=/opt/openrobots/bin:$PATH`
+- `LD_LIBRARY_PATH=/opt/openrobots/lib:$LD_LIBRARY_PATH`
+- `PKG_CONFIG_PATH=/opt/openrobots/lib/pkgconfig:$PKG_CONFIG_PATH`
+- `CMAKE_PREFIX_PATH=/opt/openrobots:$CMAKE_PREFIX_PATH`
+- `PYTHONPATH=~/tsid_ws:/opt/openrobots/lib/python3.8/site-packages:$PYTHONPATH`
+- 작업 디렉터리 `~/tsid_ws`
+
+`tsidhome` 실행 파일 위치:
+
+- 함수 정의: `/home/ryoo/TSID-tutorial/configs/bashrc_snippets/tsidhome.sh`
+- 실제 실행 스크립트: `~/tsid_ws/tsid/exercizes/show_ur5_home.py`
+
+## 실행 후 확인할 출력과 화면
+
+Python import 점검:
 
 ```bash
 python3 -c "import tsid, pinocchio, eigenpy; print('OK')"
 ```
 
-`OK`가 뜨면 `ex_0`부터 바로 시작해도 됩니다.
+viewer 점검:
 
-## 왜 중요한가
+```bash
+which gepetto-gui
+```
 
-TSID 예제는 `python`, `Pinocchio`, `openrobots`, `viewer`, `LMPC_walking` 의존성이 함께 맞아야 자연스럽게 돌아갑니다. 이 장을 먼저 정리해 두면 이후 장들은 실행 명령과 그래프 해석에만 집중할 수 있습니다.
+정상 상태:
 
-## 다음 단계
+- `python3 -c ...` 실행 시 `OK`
+- `which gepetto-gui`가 `/opt/openrobots/bin/gepetto-gui`를 가리킴
+- `tsidhome` 실행 시 `gepetto-gui`에 UR5 홈 자세가 표시됨
+- `ex_0` 실행 시 터미널에 `tracking err task-posture`가 출력되고 figure가 열림
 
-다음 장인 [TSID 핵심 개념](02_tsid_concepts.md) 에서 `task`, `contact`, `QP solver`가 어떤 역할을 하는지 먼저 잡고, 바로 `ex_0`로 내려가면 됩니다.
+## 다음 문서
+
+[TSID 전체 흐름](00_overview.md)에서 문서 순서와 각 예제의 실행 대상을 먼저 확인한 뒤 [TSID 핵심 개념](02_tsid_concepts.md)으로 이동합니다.

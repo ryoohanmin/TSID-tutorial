@@ -1,8 +1,11 @@
 # ex_0 Joint-Space Tracking
 
-이 장에서 하는 일은 UR5를 관절 공간에서 추종시키는 가장 작은 TSID 예제를 먼저 익히는 것입니다. `ex_0_ur5_joint_space_control.py`는 이후 모든 장에서 반복해서 등장하는 `reference -> task -> QP -> tracking` 흐름의 출발점입니다.
+## 파일과 목적
 
-## 실행
+- 파일: `ex_0_ur5_joint_space_control.py`
+- 목적: UR5 관절 공간에서 `reference -> task -> QP -> tracking` 흐름을 가장 작은 형태로 확인
+
+## 실행 명령
 
 ```bash
 tsidtutorial
@@ -10,44 +13,54 @@ cd ~/tsid_ws/tsid/exercizes
 python3 ex_0_ur5_joint_space_control.py
 ```
 
-## 무엇을 하는가
+## 코드에서 만드는 것
 
-이 예제는 `q_ref`, `dq_ref`, `ddq_ref`로 관절 기준 궤적을 만들고, `TaskJointPosture`가 그 궤적을 따라가게 합니다.
+- 기준 관절 자세 `q0`
+- 관절 reference `q_ref`, `dq_ref`, `ddq_ref`
+- `TaskJointPosture`
+- QP solver 입력
+- 적분된 다음 관절 상태
 
-코드에서는 아래 흐름으로 움직입니다.
+## 터미널 출력
 
-- 기준 자세 `q0`를 읽는다.
-- 사인파 궤적을 만든다.
-- `TaskJointPosture`에 reference를 넣는다.
-- QP를 풀어서 실제 가속도 `ddq`와 토크 `tau`를 구한다.
-- 적분해서 다음 관절 상태로 넘어간다.
+- `tracking err task-posture`
+  현재 자세와 목표 자세의 차이입니다.
+- 값이 작아지고 안정되면 관절 추종이 잘 되고 있다는 뜻입니다.
 
-## 무엇을 관찰할까
+## figure와 subplot 의미
 
-터미널에서는 `tracking err task-posture`를 봅니다.
-이 값은 현재 자세가 목표 자세에서 얼마나 벗어났는지를 뜻합니다. 작고 안정적으로 줄어들면 잘 따라가고 있는 것입니다.
-
-로봇 뷰어에서는 UR5가 부드럽게 움직이는지 보면 됩니다.
-`ex_0`는 손끝이 아니라 관절 자체를 흔들어보는 예제라서, 움직임이 간단하고 직관적이어야 합니다.
-
-## 그래프 의미
-
-현재 화면 구성은 `Figure 1`, `Figure 2`, `Figure 3`로 나뉘고, 각 figure 안에 `Joint i` 제목이 붙은 subplot들이 있습니다.
+현재 구성은 `Joint Position Tracking`, `Joint Velocity Tracking`, `Joint Acceleration Tracking` 3개 figure입니다. 각 figure는 관절별 subplot으로 나뉘고, subplot 제목은 `Joint 0`부터 `Joint 5`까지입니다.
 
 - `Joint Position Tracking`
-  실제 관절각 `q`와 목표 관절각 `q_ref`를 비교합니다. 파란선과 점선이 잘 겹치면 성공입니다.
+  - 파란선: 실제 관절각 `q`
+  - 점선: 목표 관절각 `q_ref`
 - `Joint Velocity Tracking`
-  실제 관절속도 `dq`와 목표 속도 `dq_ref`를 비교합니다. 속도 제한선도 같이 보입니다.
+  - 파란선: 실제 속도 `dq`
+  - 점선: 목표 속도 `dq_ref`
+  - 점선 제한선: 속도 한계 참고선
 - `Joint Acceleration Tracking`
-  실제 관절가속도 `ddq`, 목표 가속도 `ddq_ref`, task가 계산한 원하는 가속도 `ddq_des`를 비교합니다.
+  - 파란선: 실제 가속도 `ddq`
+  - 점선: reference 가속도 `ddq_ref`
+  - 초록 점선: task가 계산한 `ddq_des`
 
-핵심은 `q`, `dq`, `ddq`가 각각 `q_ref`, `dq_ref`, `ddq_ref`를 얼마나 잘 따라가는지 보는 것입니다.
+## 바꿔볼 파라미터
 
-## 왜 중요한가
+- `amp`
+  - 관절 움직임 크기
+  - 키우면 그래프 진폭과 로봇 동작이 커집니다.
+- `two_pi_f`
+  - 움직임 속도
+  - 키우면 더 빨리 흔듭니다.
+- `phi`
+  - 각 관절의 시작 위상
+  - 관절 시작 타이밍이 달라집니다.
 
-`ex_0`는 TSID의 기본 루프를 가장 단순한 형태로 보여줍니다.
-이걸 이해하면 `ex_1_ur5`에서 왜 end-effector task가 추가되는지, `ex_2`에서 왜 CoM과 contact가 중요해지는지 훨씬 쉽게 연결됩니다.
+## 결과 변화
+
+- `amp` 증가: 더 큰 관절 움직임, 추종 오차도 커질 수 있음
+- `two_pi_f` 증가: 더 빠른 추종, 그래프가 더 빡빡해짐
+- `phi` 변경: 각 관절 파형의 시작점이 달라짐
 
 ## 다음 단계
 
-다음 장인 [ex_1 End-Effector Tracking](04_ex1_ee_tracking.md) 으로 넘어가면, 같은 TSID 루프가 손끝 목표를 따라가게 바뀌는 모습을 볼 수 있습니다.
+다음 장인 [ex_1 End-Effector Tracking](04_ex1_ee_tracking.md) 에서는 같은 구조를 손끝 reference로 바꿔봅니다.
