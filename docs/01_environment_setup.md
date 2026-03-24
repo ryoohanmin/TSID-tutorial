@@ -88,7 +88,6 @@ source ~/.bashrc
 
 ```bash
 tsidtutorial
-tsidhome
 ```
 
 첫 예제 실행 (터미널 두개를 키고 위 source를 둘다 적용) :
