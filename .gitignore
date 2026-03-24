@@ -1,0 +1,19 @@
+# Generated run artifacts
+*.npz
+
+# Python cache
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+
+# Local editor and OS files
+.DS_Store
+*.swp
+*.swo
+
+# Keep generated sample logs out of the repo by default
+logs/**/*.txt
+logs/**/*.log
+logs/**/*.out
