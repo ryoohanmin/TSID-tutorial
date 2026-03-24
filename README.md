@@ -11,8 +11,6 @@
 upstream [`stack-of-tasks/tsid`](https://github.com/stack-of-tasks/tsid) 예제를 따라가며 실행 순서와 관찰 포인트를 정리했습니다.
 
 
-![TSID learning flow](assets/diagrams/tsid_learning_flow.svg)
-
 ## 빠른 시작
 
 ```bash
