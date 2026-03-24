@@ -91,13 +91,15 @@ tsidtutorial
 tsidhome
 ```
 
-첫 예제 실행:
+첫 예제 실행 (터미널 두개를 키고 위 source를 둘다 적용) :
 
 ```bash
 cd ~/tsid_ws/tsid/exercizes
 python3 ex_0_ur5_joint_space_control.py
 ```
-
+```bash
+gepetto-gui
+```
 `tsidtutorial`이 설정하는 값:
 
 - `PATH=/opt/openrobots/bin:$PATH`
