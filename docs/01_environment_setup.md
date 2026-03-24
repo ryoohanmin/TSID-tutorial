@@ -59,7 +59,22 @@ pip3 install --user quadprog
 source /home/ryoo/TSID-tutorial/configs/bashrc_snippets/tsidtutorial.sh
 source /home/ryoo/TSID-tutorial/configs/bashrc_snippets/tsidhome.sh
 ```
-
+혹은 `~/.bashrc`에 
+```bash
+tsidtutorial() {
+  export PATH=/opt/openrobots/bin:$PATH
+  export LD_LIBRARY_PATH=/opt/openrobots/lib:$LD_LIBRARY_PATH
+  export PKG_CONFIG_PATH=/opt/openrobots/lib/pkgconfig:$PKG_CONFIG_PATH
+  export CMAKE_PREFIX_PATH=/opt/openrobots:$CMAKE_PREFIX_PATH
+  export PYTHONPATH=~/tsid_ws:/opt/openrobots/lib/python3.8/site-packages:$PYTHONPATH
+  cd ~/tsid_ws
+}
+```
+tsidhome() {
+  tsidtutorial
+  cd ~/tsid_ws/tsid/exercizes
+  python3 show_ur5_home.py "$@"
+}
 등록 후 새 터미널을 열거나 아래 명령으로 반영합니다.
 
 ```bash
