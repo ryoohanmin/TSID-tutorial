@@ -1,8 +1,7 @@
 # TSID tutorial
 
-![TSID tutorial banner](assets/diagrams/tsid_tutorial_banner.svg)
 
-[![TSID](https://img.shields.io/badge/TSID-tutorial-1f6feb)](https://github.com/stack-of-tasks/tsid)
+
 [![Workflow](https://img.shields.io/badge/workflow-ex0%20%7C%20ex1%20%7C%20ex2%20%7C%20ex3%20%7C%20ex4-0f766e)](docs/00_overview.md)
 [![Environment](https://img.shields.io/badge/Ubuntu-20.04%20%2B%20ROS%20Noetic-f59e0b)](docs/01_environment_setup.md)
 [![Python](https://img.shields.io/badge/Python-3.8-3776ab)](docs/01_environment_setup.md)
