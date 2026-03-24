@@ -101,6 +101,9 @@ gepetto-gui
 ```
 <img width="765" height="772" alt="Screenshot from 2026-03-24 12-28-05" src="https://github.com/user-attachments/assets/a077fdec-2cd3-4035-b67b-8517c4a04c20" />
 
+위 GUI 창에서 왼쪽 상단에 위치하는 종이 모양을 클릭하거나 space 를 누르면 움직임을 확인가능한 위치로 변경된다.
+h 키를 눌러 커맨드들을 확인한다.
+
 `tsidtutorial`이 설정하는 값:
 
 - `PATH=/opt/openrobots/bin:$PATH`
